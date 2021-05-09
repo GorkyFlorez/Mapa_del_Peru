@@ -1,0 +1,104 @@
+# Librerias
+#------------------------------------------------------------------------
+library(sf)
+library(tidyverse)
+library(rworldxtra)
+library(hddtools)
+library(raster)
+library(BIEN)
+library(MuMIn)
+library(dismo)
+library(tidyverse)
+library(sf)
+library(rnaturalearth)                                   #Continentes
+library(rnaturalearthdata)                               #Continentes especifico
+library(colorspace) 
+library(ggsn)                                             #http://oswaldosantos.github.io/ggsn/
+library(ggspatial) 
+#------------------------------------------------------------------------
+world <- ne_countries(scale= "small", returnclass = "sf")# Continentes del mundo
+world.SA <- subset(world, continent=="South America")    # Sur America
+Peru_S       <- subset(world.SA, iso_a3 == "PER") 
+Marco_Per = st_as_sfc(st_bbox(Peru_S ))
+#-------------------------------- SHP PROPIOS#--------------------------------
+Departamentos     <- st_read ("Shp Propios/Departamentos.shp") 
+Distritos         <- st_read ("Shp GOREMAD/Catastro_Distritos.shp")                # Distritos
+Infra             <- st_read ("Mapa Dispersion David/Area de Infraestructura.shp") # Infraestructuras
+Protec            <- st_read ("Mapa Dispersion David/Area de Proteccion.shp")      # Proteccion
+Concesion         <- st_read ("Mapa Dispersion David/Consecion.shp")               # Proteccion
+Spp               <- st_read ("Mapa Dispersion David/especies.shp")                # Especies
+Vertices          <- st_read ("Mapa Dispersion David/Vertices.shp")                # Vertices
+Rios_Secundarios  <- st_read ("Shp GOREMAD/Catastro_rios_Secundarios.shp")# Rios Secundarios
+Concesiones_casta <- st_read ("Shp Propios/Castaña.shp")
+Red_Vial          <- st_read ("Shp Propios/Red_Vial.shp") 
+Centro_Pobla      <- st_read("Shp Propios/CP.shp") 
+#-------------------------------- shp con nombres
+world_points <- st_centroid(Vertices  )                        # Centros 
+world_points <- cbind(Vertices , st_coordinates(st_centroid(Vertices $geometry))) #Utilizamos la geometria
+#------------------------------------------------------------------------
+library(colorspace) #https://awesomeopensource.com/project/EmilHvitfeldt/r-color-palettes
+hcl_palettes(plot = TRUE)
+q4 <- qualitative_hcl(195, palette = "Pastel 1")
+q5 <- qualitative_hcl(36, palette = "Pastel 1")
+q6 <- qualitative_hcl(15, palette = "Pastel 1")
+#------------------------------------------------------------------------
+P1<-ggplot() + geom_sf(data = Concesiones_casta, fill = NA, show.legend = FALSE )+ scale_fill_manual(values = q5)+
+        geom_sf(data = Concesion, fill = "red", color = 'black', size = 1.2)+
+        geom_sf(data = Departamentos, fill = NA, color = 'black', size = 1.2)+
+        geom_sf(data = Distritos, fill = NA, color = 'black', size = 1.2)+
+        geom_sf(data=Red_Vial, fill=NA, color="#A93154",alpha = 5)+
+        geom_sf(data=Centro_Pobla, fill=NA, color="black")+
+        annotation_scale() +
+        north(Concesiones_casta)+
+        theme(panel.grid.major = element_line(color = gray(.5),
+                                        linetype = "dashed", size = 0.5),
+        panel.background = element_rect(fill = "white"),
+        legend.title = element_text(face=2),
+        legend.background = element_blank(),
+        legend.key = element_blank(),
+        legend.position = c(.01, .15),
+        legend.justification = c("left", "bottom"),
+        legend.box.just = "left",
+        legend.text = element_text(size=8,face=2))+
+        labs(color="Species",fill = "Sur America")+
+        labs(title = "MAPA DE UBICACION", 
+        subtitle="Madre de Dios",caption="Gorky Florez",x="Longitud",y="Latitud",tag="A)")+
+        coord_sf(crs = st_crs('+init=epsg:32719'),xlim = c(328612,536472),
+           ylim = c(8557267 , 8781713),expand = FALSE)
+
+
+P2<-ggplot() + geom_sf(data = Concesiones_casta, fill = NA)+ 
+       geom_sf(data = Concesion, fill = "#FFC5D5", color = 'black', size = 1.2)+
+       geom_sf(data = Spp, aes(fill=ESTRADA),  size = 2, shape = 23)+
+       geom_sf(data = Departamentos, fill = NA, color = 'black', size = 1.2)+
+       geom_sf(data = Distritos, fill = NA, color = 'black', size = 1.2)+
+       geom_sf(data = Red_Vial, fill=NA, color="#A93154",alpha = 5)+
+       geom_sf(data = Centro_Pobla, fill=NA, color="black")+
+       geom_sf(data = Rios_Secundarios, fill=NA, color="blue",alpha = 5)+
+       geom_sf(data = Vertices ,fill=NA, color="red", shape=19)+
+       geom_text(data= world_points,aes(x=X, y=Y, label=Vertices), size = 3,
+            color = "black", fontface = "bold", check_overlap = FALSE)+
+       annotation_scale() +
+       annotation_north_arrow(location="br",which_north="true",style=north_arrow_nautical ())+
+       theme(panel.grid.major = element_line(color = gray(.5),
+                                        linetype = "dashed", size = 0.5),
+        panel.background = element_rect(fill = "white"),
+        legend.title = element_text(face=2),
+        legend.background = element_blank(),
+        legend.key = element_blank(),
+        legend.position = c(.01, .10),
+        legend.justification = c("left", "bottom"),
+        legend.box.just = "left",
+        legend.text = element_text(size=8,face=2))+
+        labs(color="Species",fill = "Estradas")+
+        labs(title = "MAPA DE Dispercion de Especies", 
+        subtitle="Dispersion de especies de Bertholletia excelsa",caption="Gorky Florez",x="Longitud",y="Latitud",tag="B)")+
+        coord_sf(crs = st_crs('+init=epsg:32719'),xlim = c(404400,408000),
+           ylim = c(8623700 ,8629000),expand = FALSE)
+#-----------------------------------------------------------------------------------
+#                                       Exportacion del Mapa
+library(gridExtra)
+W  <- grid.arrange(P1,P2,ncol = 2)
+# Guargdar en formato PNG
+ggsave("Mapa de Dispersion de especies.pdf",plot = W, width =  15,height = 9, dpi=900)
+#-----------------------------------------------------------------------------------
